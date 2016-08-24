@@ -15,9 +15,10 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// MetadataHeaderPrefix is prepended to HTTP headers in order to convert them to 
+// MetadataHeaderPrefix is prepended to HTTP headers in order to convert them to
 // gRPC metadata for incoming requests processed by grpc-gateway
 const MetadataHeaderPrefix = "Grpc-Metadata-"
+
 // MetadataTrailerPrefix is prepended to gRPC metadata as it is converted to
 // HTTP headers in a response handled by grpc-gateway
 const MetadataTrailerPrefix = "Grpc-Trailer-"
@@ -25,6 +26,9 @@ const metadataGrpcTimeout = "Grpc-Timeout"
 
 const xForwardedFor = "X-Forwarded-For"
 const xForwardedHost = "X-Forwarded-Host"
+const cookieHeader = "Cookie"
+const csrfTokenHeader = "X-Phabricator-Csrf"
+const corsHeaderPrefix = "access-control-"
 
 var (
 	// DefaultContextTimeout is used for gRPC call context.WithTimeout whenever a Grpc-Timeout inbound
@@ -34,7 +38,6 @@ var (
 
 /*
 AnnotateContext adds context information such as metadata from the request.
-
 At a minimum, the RemoteAddr is included in the fashion of "X-Forwarded-For",
 except that the forwarded destination is not another HTTP service but rather
 a gRPC service.
@@ -54,6 +57,18 @@ func AnnotateContext(ctx context.Context, req *http.Request) (context.Context, e
 		for _, val := range vals {
 			if key == "Authorization" {
 				pairs = append(pairs, "authorization", val)
+				continue
+			}
+			if key == cookieHeader {
+				pairs = append(pairs, key, val)
+				continue
+			}
+			if strings.EqualFold(key, csrfTokenHeader) {
+				pairs = append(pairs, key, val)
+				continue
+			}
+			if strings.HasPrefix(strings.ToLower(key), corsHeaderPrefix) {
+				pairs = append(pairs, key, val)
 				continue
 			}
 			if strings.HasPrefix(key, MetadataHeaderPrefix) {
@@ -78,6 +93,14 @@ func AnnotateContext(ctx context.Context, req *http.Request) (context.Context, e
 			grpclog.Printf("invalid remote addr: %s", addr)
 		}
 	}
+
+	// adding extra headers to metadata
+	pairs = append(pairs,
+		"http-request-method", req.Method,
+		"http-request-endpoint", req.RequestURI,
+		"http-request-host", req.Host,
+		"http-userAgent", req.UserAgent(),
+	)
 
 	if timeout != 0 {
 		ctx, _ = context.WithTimeout(ctx, timeout)
