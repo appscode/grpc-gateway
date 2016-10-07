@@ -14,48 +14,48 @@ import (
 // Registry is a registry of information extracted from plugin.CodeGeneratorRequest.
 type Registry struct {
 	// msgs is a mapping from fully-qualified message name to descriptor
-	msgs map[string]*Message
+	Msgs map[string]*Message
 
 	// enums is a mapping from fully-qualified enum name to descriptor
-	enums map[string]*Enum
+	Enums map[string]*Enum
 
 	// files is a mapping from file path to descriptor
-	files map[string]*File
+	Files map[string]*File
 
 	// prefix is a prefix to be inserted to golang package paths generated from proto package names.
-	prefix string
+	Prefix string
 
 	// pkgMap is a user-specified mapping from file path to proto package.
-	pkgMap map[string]string
+	PkgMap map[string]string
 
 	// pkgAliases is a mapping from package aliases to package paths in go which are already taken.
-	pkgAliases map[string]string
+	PkgAliases map[string]string
 }
 
 // NewRegistry returns a new Registry.
 func NewRegistry() *Registry {
 	return &Registry{
-		msgs:       make(map[string]*Message),
-		enums:      make(map[string]*Enum),
-		files:      make(map[string]*File),
-		pkgMap:     make(map[string]string),
-		pkgAliases: make(map[string]string),
+		Msgs:       make(map[string]*Message),
+		Enums:      make(map[string]*Enum),
+		Files:      make(map[string]*File),
+		PkgMap:     make(map[string]string),
+		PkgAliases: make(map[string]string),
 	}
 }
 
 // Load loads definitions of services, methods, messages, enumerations and fields from "req".
 func (r *Registry) Load(req *plugin.CodeGeneratorRequest) error {
 	for _, file := range req.GetProtoFile() {
-		r.loadFile(file)
+		r.LoadFile(file)
 	}
 
 	var targetPkg string
 	for _, name := range req.FileToGenerate {
-		target := r.files[name]
+		target := r.Files[name]
 		if target == nil {
 			return fmt.Errorf("no such file: %s", name)
 		}
-		name := packageIdentityName(target.FileDescriptorProto)
+		name := PackageIdentityName(target.FileDescriptorProto)
 		if targetPkg == "" {
 			targetPkg = name
 		} else {
@@ -74,7 +74,7 @@ func (r *Registry) Load(req *plugin.CodeGeneratorRequest) error {
 // loadFile loads messages, enumerations and fields from "file".
 // It does not loads services and methods in "file".  You need to call
 // loadServices after loadFiles is called for all files to load services and methods.
-func (r *Registry) loadFile(file *descriptor.FileDescriptorProto) {
+func (r *Registry) LoadFile(file *descriptor.FileDescriptorProto) {
 	pkg := GoPackage{
 		Path: r.goPackagePath(file),
 		Name: defaultGoPackageName(file),
@@ -93,7 +93,7 @@ func (r *Registry) loadFile(file *descriptor.FileDescriptorProto) {
 		GoPkg:               pkg,
 	}
 
-	r.files[file.GetName()] = f
+	r.Files[file.GetName()] = f
 	r.registerMsg(f, nil, file.GetMessageType())
 	r.registerEnum(f, nil, file.GetEnumType())
 }
@@ -113,7 +113,7 @@ func (r *Registry) registerMsg(file *File, outerPath []string, msgs []*descripto
 			})
 		}
 		file.Messages = append(file.Messages, m)
-		r.msgs[m.FQMN()] = m
+		r.Msgs[m.FQMN()] = m
 		glog.V(1).Infof("register name: %s", m.FQMN())
 
 		var outers []string
@@ -133,7 +133,7 @@ func (r *Registry) registerEnum(file *File, outerPath []string, enums []*descrip
 			Index:               i,
 		}
 		file.Enums = append(file.Enums, e)
-		r.enums[e.FQEN()] = e
+		r.Enums[e.FQEN()] = e
 		glog.V(1).Infof("register enum name: %s", e.FQEN())
 	}
 }
@@ -143,7 +143,7 @@ func (r *Registry) registerEnum(file *File, outerPath []string, enums []*descrip
 func (r *Registry) LookupMsg(location, name string) (*Message, error) {
 	glog.V(1).Infof("lookup %s from %s", name, location)
 	if strings.HasPrefix(name, ".") {
-		m, ok := r.msgs[name]
+		m, ok := r.Msgs[name]
 		if !ok {
 			return nil, fmt.Errorf("no message found: %s", name)
 		}
@@ -156,7 +156,7 @@ func (r *Registry) LookupMsg(location, name string) (*Message, error) {
 	components := strings.Split(location, ".")
 	for len(components) > 0 {
 		fqmn := strings.Join(append(components, name), ".")
-		if m, ok := r.msgs[fqmn]; ok {
+		if m, ok := r.Msgs[fqmn]; ok {
 			return m, nil
 		}
 		components = components[:len(components)-1]
@@ -169,7 +169,7 @@ func (r *Registry) LookupMsg(location, name string) (*Message, error) {
 func (r *Registry) LookupEnum(location, name string) (*Enum, error) {
 	glog.V(1).Infof("lookup enum %s from %s", name, location)
 	if strings.HasPrefix(name, ".") {
-		e, ok := r.enums[name]
+		e, ok := r.Enums[name]
 		if !ok {
 			return nil, fmt.Errorf("no enum found: %s", name)
 		}
@@ -182,7 +182,7 @@ func (r *Registry) LookupEnum(location, name string) (*Enum, error) {
 	components := strings.Split(location, ".")
 	for len(components) > 0 {
 		fqen := strings.Join(append(components, name), ".")
-		if e, ok := r.enums[fqen]; ok {
+		if e, ok := r.Enums[fqen]; ok {
 			return e, nil
 		}
 		components = components[:len(components)-1]
@@ -192,7 +192,7 @@ func (r *Registry) LookupEnum(location, name string) (*Enum, error) {
 
 // LookupFile looks up a file by name.
 func (r *Registry) LookupFile(name string) (*File, error) {
-	f, ok := r.files[name]
+	f, ok := r.Files[name]
 	if !ok {
 		return nil, fmt.Errorf("no such file given: %s", name)
 	}
@@ -201,12 +201,12 @@ func (r *Registry) LookupFile(name string) (*File, error) {
 
 // AddPkgMap adds a mapping from a .proto file to proto package name.
 func (r *Registry) AddPkgMap(file, protoPkg string) {
-	r.pkgMap[file] = protoPkg
+	r.PkgMap[file] = protoPkg
 }
 
 // SetPrefix registeres the perfix to be added to go package paths generated from proto package names.
 func (r *Registry) SetPrefix(prefix string) {
-	r.prefix = prefix
+	r.Prefix = prefix
 }
 
 // ReserveGoPackageAlias reserves the unique alias of go package.
@@ -214,13 +214,13 @@ func (r *Registry) SetPrefix(prefix string) {
 // If failed, the alias is already taken by another package, so you need to use another
 // alias for the package in your go files.
 func (r *Registry) ReserveGoPackageAlias(alias, pkgpath string) error {
-	if taken, ok := r.pkgAliases[alias]; ok {
+	if taken, ok := r.PkgAliases[alias]; ok {
 		if taken == pkgpath {
 			return nil
 		}
 		return fmt.Errorf("package name %s is already taken. Use another alias", alias)
 	}
-	r.pkgAliases[alias] = pkgpath
+	r.PkgAliases[alias] = pkgpath
 	return nil
 }
 
@@ -229,8 +229,8 @@ func (r *Registry) ReserveGoPackageAlias(alias, pkgpath string) error {
 // if it includes a slash,  Otherwide, it generates a path from the file name of "f".
 func (r *Registry) goPackagePath(f *descriptor.FileDescriptorProto) string {
 	name := f.GetName()
-	if pkg, ok := r.pkgMap[name]; ok {
-		return path.Join(r.prefix, pkg)
+	if pkg, ok := r.PkgMap[name]; ok {
+		return path.Join(r.Prefix, pkg)
 	}
 
 	gopkg := f.Options.GetGoPackage()
@@ -239,13 +239,13 @@ func (r *Registry) goPackagePath(f *descriptor.FileDescriptorProto) string {
 		return gopkg
 	}
 
-	return path.Join(r.prefix, path.Dir(name))
+	return path.Join(r.Prefix, path.Dir(name))
 }
 
 // GetAllFQMNs returns a list of all FQMNs
 func (r *Registry) GetAllFQMNs() []string {
 	var keys []string
-	for k := range r.msgs {
+	for k := range r.Msgs {
 		keys = append(keys, k)
 	}
 	return keys
@@ -254,7 +254,7 @@ func (r *Registry) GetAllFQMNs() []string {
 // GetAllFQENs returns a list of all FQENs
 func (r *Registry) GetAllFQENs() []string {
 	var keys []string
-	for k := range r.enums {
+	for k := range r.Enums {
 		keys = append(keys, k)
 	}
 	return keys
@@ -263,14 +263,14 @@ func (r *Registry) GetAllFQENs() []string {
 // defaultGoPackageName returns the default go package name to be used for go files generated from "f".
 // You might need to use an unique alias for the package when you import it.  Use ReserveGoPackageAlias to get a unique alias.
 func defaultGoPackageName(f *descriptor.FileDescriptorProto) string {
-	name := packageIdentityName(f)
+	name := PackageIdentityName(f)
 	return strings.Replace(name, ".", "_", -1)
 }
 
 // packageIdentityName returns the identity of packages.
 // protoc-gen-grpc-gateway rejects CodeGenerationRequests which contains more than one packages
 // as protoc-gen-go does.
-func packageIdentityName(f *descriptor.FileDescriptorProto) string {
+func PackageIdentityName(f *descriptor.FileDescriptorProto) string {
 	if f.Options != nil && f.Options.GoPackage != nil {
 		gopkg := f.Options.GetGoPackage()
 		idx := strings.LastIndex(gopkg, "/")
