@@ -20,14 +20,14 @@ func compilePath(t *testing.T, path string) httprule.Template {
 func testExtractServices(t *testing.T, input []*descriptor.FileDescriptorProto, target string, wantSvcs []*Service) {
 	reg := NewRegistry()
 	for _, file := range input {
-		reg.loadFile(file)
+		reg.LoadFile(file)
 	}
-	err := reg.loadServices(reg.files[target])
+	err := reg.loadServices(reg.Files[target])
 	if err != nil {
 		t.Errorf("loadServices(%q) failed with %v; want success; files=%v", target, err, input)
 	}
 
-	file := reg.files[target]
+	file := reg.Files[target]
 	svcs := file.Services
 	var i int
 	for i = 0; i < len(svcs) && i < len(wantSvcs); i++ {
@@ -911,10 +911,10 @@ func TestExtractServicesWithError(t *testing.T) {
 			if err := proto.UnmarshalText(src, &fd); err != nil {
 				t.Fatalf("proto.UnmarshalText(%s, &fd) failed with %v; want success", src, err)
 			}
-			reg.loadFile(&fd)
+			reg.LoadFile(&fd)
 			fds = append(fds, &fd)
 		}
-		err := reg.loadServices(reg.files[spec.target])
+		err := reg.loadServices(reg.Files[spec.target])
 		if err == nil {
 			t.Errorf("loadServices(%q) succeeded; want an error; files=%v", spec.target, spec.srcs)
 		}
@@ -1092,7 +1092,7 @@ func TestResolveFieldPath(t *testing.T) {
 			t.Fatalf("proto.Unmarshal(%s) failed with %v; want success", spec.src, err)
 		}
 		reg := NewRegistry()
-		reg.loadFile(&file)
+		reg.LoadFile(&file)
 		f, err := reg.LookupFile(file.GetName())
 		if err != nil {
 			t.Fatalf("reg.LookupFile(%q) failed with %v; want success; on file=%s", file.GetName(), err, spec.src)

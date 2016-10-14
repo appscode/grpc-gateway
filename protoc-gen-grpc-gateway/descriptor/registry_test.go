@@ -13,7 +13,7 @@ func loadFile(t *testing.T, reg *Registry, src string) *descriptor.FileDescripto
 	if err := proto.UnmarshalText(src, &file); err != nil {
 		t.Fatalf("proto.UnmarshalText(%s, &file) failed with %v; want success", src, err)
 	}
-	reg.loadFile(&file)
+	reg.LoadFile(&file)
 	return &file
 }
 
@@ -41,7 +41,7 @@ func TestLoadFile(t *testing.T) {
 		>
 	`)
 
-	file := reg.files["example.proto"]
+	file := reg.Files["example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -88,7 +88,7 @@ func TestLoadFileNestedPackage(t *testing.T) {
 		package: 'example.nested.nested2'
 	`)
 
-	file := reg.files["example.proto"]
+	file := reg.Files["example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -106,7 +106,7 @@ func TestLoadFileWithDir(t *testing.T) {
 		package: 'example'
 	`)
 
-	file := reg.files["path/to/example.proto"]
+	file := reg.Files["path/to/example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -123,7 +123,7 @@ func TestLoadFileWithoutPackage(t *testing.T) {
 		name: 'path/to/example_file.proto'
 	`)
 
-	file := reg.files["path/to/example_file.proto"]
+	file := reg.Files["path/to/example_file.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -142,7 +142,7 @@ func TestLoadFileWithMapping(t *testing.T) {
 		package: 'example'
 	`)
 
-	file := reg.files["path/to/example.proto"]
+	file := reg.Files["path/to/example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -171,7 +171,7 @@ func TestLoadFileWithPackageNameCollision(t *testing.T) {
 		package: 'ioutil'
 	`)
 
-	file := reg.files["path/to/another.proto"]
+	file := reg.Files["path/to/another.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "path/to/another.proto")
 		return
@@ -181,7 +181,7 @@ func TestLoadFileWithPackageNameCollision(t *testing.T) {
 		t.Errorf("file.GoPkg = %#v; want %#v", got, want)
 	}
 
-	file = reg.files["path/to/example.proto"]
+	file = reg.Files["path/to/example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "path/to/example.proto")
 		return
@@ -191,7 +191,7 @@ func TestLoadFileWithPackageNameCollision(t *testing.T) {
 		t.Errorf("file.GoPkg = %#v; want %#v", got, want)
 	}
 
-	file = reg.files["path/to/ioutil.proto"]
+	file = reg.Files["path/to/ioutil.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "path/to/ioutil.proto")
 		return
@@ -215,7 +215,7 @@ func TestLoadFileWithIdenticalGoPkg(t *testing.T) {
 		package: 'example'
 	`)
 
-	file := reg.files["path/to/example.proto"]
+	file := reg.Files["path/to/example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -225,7 +225,7 @@ func TestLoadFileWithIdenticalGoPkg(t *testing.T) {
 		t.Errorf("file.GoPkg = %#v; want %#v", got, want)
 	}
 
-	file = reg.files["path/to/another.proto"]
+	file = reg.Files["path/to/another.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return
@@ -244,7 +244,7 @@ func TestLoadFileWithPrefix(t *testing.T) {
 		package: 'example'
 	`)
 
-	file := reg.files["path/to/example.proto"]
+	file := reg.Files["path/to/example.proto"]
 	if file == nil {
 		t.Errorf("reg.files[%q] = nil; want non-nil", "example.proto")
 		return

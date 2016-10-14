@@ -36,6 +36,19 @@ GATEWAY_PLUGIN_SRC= utilities/doc.go \
 		    protoc-gen-grpc-gateway/httprule/types.go \
 		    protoc-gen-grpc-gateway/main.go
 
+CORS_PLUGIN=bin/protoc-gen-grpc-gateway-cors
+CORS_PLUGIN_PKG=$(PKG)/protoc-gen-grpc-gateway-cors
+CORS_PLUGIN_SRC= $(GATEWAY_PLUGIN_SRC) \
+            protoc-gen-grpc-gateway-cors \
+            protoc-gen-grpc-gateway-cors/descriptor \
+            protoc-gen-grpc-gateway-cors/descriptor/registry.go \
+            protoc-gen-grpc-gateway-cors/descriptor/services.go \
+            protoc-gen-grpc-gateway-cors/gencors \
+            protoc-gen-grpc-gateway-cors/gencors/generator.go \
+            protoc-gen-grpc-gateway-cors/gencors/template.go \
+            protoc-gen-grpc-gateway-cors/gencors/doc.go \
+            protoc-gen-grpc-gateway-cors/main.go
+
 GOOGLEAPIS_DIR=third_party/googleapis
 OPTIONS_PROTO=$(GOOGLEAPIS_DIR)/google/api/annotations.proto $(GOOGLEAPIS_DIR)/google/api/http.proto
 OPTIONS_GO=$(OPTIONS_PROTO:.proto=.pb.go)
@@ -43,6 +56,11 @@ OUTPUT_DIR=_output
 
 RUNTIME_PROTO=runtime/internal/stream_chunk.proto
 RUNTIME_GO=$(RUNTIME_PROTO:.proto=.pb.go)
+
+APPSCODEAPIS_DIR=third_party/appscodeapis
+APPSCODE_PROTO=$(APPSCODEAPIS_DIR)/appscode/api/annotations.proto $(APPSCODEAPIS_DIR)/appscode/api/cors.proto
+APPSCODE_GO=$(APPSCODE_PROTO:.proto=.pb.go)
+OUTPUT_DIR=_output
 
 PKGMAP=Mgoogle/protobuf/descriptor.proto=$(GO_PLUGIN_PKG)/descriptor,Mgoogle/api/annotations.proto=$(PKG)/$(GOOGLEAPIS_DIR)/google/api,Mexamples/sub/message.proto=$(PKG)/examples/sub
 SWAGGER_EXAMPLES=examples/examplepb/echo_service.proto \
@@ -76,7 +94,7 @@ SWAGGER_CODEGEN=swagger-codegen
 
 PROTOC_INC_PATH=$(dir $(shell which protoc))/../include
 
-generate: $(OPTIONS_GO) $(RUNTIME_GO)
+generate: $(OPTIONS_GO) $(RUNTIME_GO) $(APPSCODE_GO)
 
 .SUFFIXES: .go .proto
 
@@ -88,12 +106,17 @@ $(OPTIONS_GO): $(OPTIONS_PROTO) $(GO_PLUGIN)
 	protoc -I $(PROTOC_INC_PATH) -I$(GOOGLEAPIS_DIR) --plugin=$(GO_PLUGIN) --go_out=$(PKGMAP):$(GOOGLEAPIS_DIR) $(OPTIONS_PROTO)
 $(RUNTIME_GO): $(RUNTIME_PROTO) $(GO_PLUGIN)
 	protoc -I $(PROTOC_INC_PATH) --plugin=$(GO_PLUGIN) -I. --go_out=$(PKGMAP):. $(RUNTIME_PROTO)
+$(APPSCODE_GO): $(APPSCODE_PROTO) $(GO_PLUGIN)
+	protoc -I $(PROTOC_INC_PATH) -I$(APPSCODEAPIS_DIR) --plugin=$(GO_PLUGIN) --go_out=$(PKGMAP):$(APPSCODEAPIS_DIR) $(APPSCODE_PROTO)
 
 $(GATEWAY_PLUGIN): $(OPTIONS_GO) $(RUNTIME_GO) $(GATEWAY_PLUGIN_SRC)
 	go build -o $@ $(GATEWAY_PLUGIN_PKG)
 
 $(SWAGGER_PLUGIN): $(OPTIONS_GO) $(SWAGGER_PLUGIN_SRC)
 	go build -o $@ $(SWAGGER_PLUGIN_PKG)
+
+$(CORS_PLUGIN): $(OPTIONS_GO) $(RUNTIME_GO) $(APPSCODE_GO) $(CORS_PLUGIN_SRC)
+	go build -o $@ $(CORS_PLUGIN_PKG)
 
 $(EXAMPLE_SVCSRCS): $(GO_PLUGIN) $(EXAMPLES)
 	protoc -I $(PROTOC_INC_PATH) -I. -I$(GOOGLEAPIS_DIR) --plugin=$(GO_PLUGIN) --go_out=$(PKGMAP),plugins=grpc:. $(EXAMPLES)
