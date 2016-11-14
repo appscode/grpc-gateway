@@ -29,6 +29,7 @@ const xForwardedHost = "X-Forwarded-Host"
 const cookieHeader = "Cookie"
 const csrfTokenHeader = "X-Phabricator-Csrf"
 const corsHeaderPrefix = "access-control-"
+const rateLimitHeaderPrefix = "x-ratelimit-"
 
 var (
 	// DefaultContextTimeout is used for gRPC call context.WithTimeout whenever a Grpc-Timeout inbound
