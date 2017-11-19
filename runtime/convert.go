@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"strconv"
+	"github.com/golang/protobuf/ptypes/timestamp"
+	"fmt"
 )
 
 // String just returns the given string.
@@ -55,4 +57,9 @@ func Uint32(val string) (uint32, error) {
 		return 0, err
 	}
 	return uint32(i), nil
+}
+
+func Timestamp(val string)(*timestamp.Timestamp, error)  {
+	fmt.Println("***************************")
+	return nil, nil
 }

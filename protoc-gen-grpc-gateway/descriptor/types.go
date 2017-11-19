@@ -9,6 +9,12 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway/httprule"
 )
 
+// IsApimachinaryType returns true if the provided fully qualified type name is considered 'api-machinary'.
+func IsApimachinaryType(typeName string) bool {
+	_, ok := apimachinaryTypeConv[typeName]
+	return ok
+}
+
 // GoPackage represents a golang package
 type GoPackage struct {
 	// Path is the package path to the package.
@@ -195,6 +201,9 @@ func (p Parameter) ConvertFuncExpr() (string, error) {
 	typ := p.Target.GetType()
 	conv, ok := tbl[typ]
 	if !ok {
+		conv, ok = apimachinaryTypeConv[p.Target.GetTypeName()]
+	}
+	if !ok {
 		return "", fmt.Errorf("unsupported field type %s of parameter %s in %s.%s", typ, p.FieldPath, p.Method.Service.GetName(), p.Method.GetName())
 	}
 	return conv, nil
@@ -318,5 +327,9 @@ var (
 		descriptor.FieldDescriptorProto_TYPE_SFIXED64: "runtime.Int64P",
 		descriptor.FieldDescriptorProto_TYPE_SINT32:   "runtime.Int32P",
 		descriptor.FieldDescriptorProto_TYPE_SINT64:   "runtime.Int64P",
+	}
+
+	apimachinaryTypeConv = map[string]string {
+		".k8s.io.apimachinery.pkg.apis.meta.v1.Time": "runtime.Timestamp",
 	}
 )
