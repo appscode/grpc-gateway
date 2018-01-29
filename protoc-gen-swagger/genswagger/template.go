@@ -155,13 +155,10 @@ func queryParams(message *descriptor.Message, field *descriptor.Field, prefix st
 }
 
 // findServicesMessagesAndEnumerations discovers all messages and enums defined in the RPC methods of the service.
-func findServicesMessagesAndEnumerations(s []*descriptor.Service, reg *descriptor.Registry, m messageMap, e enumMap, refs refMap) {
+func findServicesMessagesAndEnumerations(s []*descriptor.Service, reg *descriptor.Registry, m messageMap, e enumMap) {
 	for _, svc := range s {
 		for _, meth := range svc.Methods {
-			// Request may be fully included in query
-			if _, ok := refs[fmt.Sprintf("#/definitions/%s", fullyQualifiedNameToSwaggerName(meth.RequestType.FQMN(), reg))]; ok {
-				m[fullyQualifiedNameToSwaggerName(meth.RequestType.FQMN(), reg)] = meth.RequestType
-			}
+			m[fullyQualifiedNameToSwaggerName(meth.RequestType.FQMN(), reg)] = meth.RequestType
 			findNestedMessagesAndEnumerations(meth.RequestType, reg, m, e)
 
 			m[fullyQualifiedNameToSwaggerName(meth.ResponseType.FQMN(), reg)] = meth.ResponseType
@@ -502,7 +499,7 @@ func templateToSwaggerPath(path string) string {
 	return strings.Join(parts, "/")
 }
 
-func renderServices(services []*descriptor.Service, paths swaggerPathsObject, reg *descriptor.Registry, refs refMap) error {
+func renderServices(services []*descriptor.Service, paths swaggerPathsObject, reg *descriptor.Registry) error {
 	// Correctness of svcIdx and methIdx depends on 'services' containing the services in the same order as the 'file.Service' array.
 	for svcIdx, svc := range services {
 		for methIdx, meth := range svc.Methods {
@@ -600,18 +597,12 @@ func renderServices(services []*descriptor.Service, paths swaggerPathsObject, re
 						},
 					},
 				}
+
 				if bIdx == 0 {
 					operationObject.OperationID = fmt.Sprintf("%s", meth.GetName())
 				} else {
 					// OperationID must be unique in an OpenAPI v2 definition.
 					operationObject.OperationID = fmt.Sprintf("%s%d", meth.GetName(), bIdx+1)
-				}
-
-				// Fill reference map with referenced request messages
-				for _, param := range operationObject.Parameters {
-					if param.Schema != nil && param.Schema.Ref != "" {
-						refs[param.Schema.Ref] = struct{}{}
-					}
 				}
 
 				methComments := protoComments(reg, svc.File, nil, "Service", int32(svcIdx), methProtoPath, int32(methIdx))
@@ -687,8 +678,7 @@ func applyTemplate(p param) (string, error) {
 
 	// Loops through all the services and their exposed GET/POST/PUT/DELETE definitions
 	// and create entries for all of them.
-	refs := refMap{}
-	if err := renderServices(p.Services, s.Paths, p.reg, refs); err != nil {
+	if err := renderServices(p.Services, s.Paths, p.reg); err != nil {
 		panic(err)
 	}
 
@@ -696,7 +686,7 @@ func applyTemplate(p param) (string, error) {
 	// write their request and response types out as definition objects.
 	m := messageMap{}
 	e := enumMap{}
-	findServicesMessagesAndEnumerations(p.Services, p.reg, m, e, refs)
+	findServicesMessagesAndEnumerations(p.Services, p.reg, m, e)
 	renderMessagesAsDefinition(m, s.Definitions, p.reg)
 	renderEnumerationsAsDefinition(e, s.Definitions, p.reg)
 
