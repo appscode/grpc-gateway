@@ -25,7 +25,7 @@ func (r *Registry) loadServices(file *File) error {
 		}
 		for _, md := range sd.GetMethod() {
 			glog.V(2).Infof("Processing %s.%s", sd.GetName(), md.GetName())
-			opts, err := extractAPIOptions(md)
+			opts, err := ExtractAPIOptions(md)
 			if err != nil {
 				glog.Errorf("Failed to extract ApiMethodOptions from %s.%s: %v", svc.GetName(), md.GetName(), err)
 				return err
@@ -33,7 +33,7 @@ func (r *Registry) loadServices(file *File) error {
 			if opts == nil {
 				glog.V(1).Infof("Found non-target method: %s.%s", svc.GetName(), md.GetName())
 			}
-			meth, err := r.newMethod(svc, md, opts)
+			meth, err := r.NewMethod(svc, md, opts)
 			if err != nil {
 				return err
 			}
@@ -49,7 +49,7 @@ func (r *Registry) loadServices(file *File) error {
 	return nil
 }
 
-func (r *Registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto, opts *options.HttpRule) (*Method, error) {
+func (r *Registry) NewMethod(svc *Service, md *descriptor.MethodDescriptorProto, opts *options.HttpRule) (*Method, error) {
 	requestType, err := r.LookupMsg(svc.File.GetPackage(), md.GetInputType())
 	if err != nil {
 		return nil, err
@@ -163,7 +163,7 @@ func (r *Registry) newMethod(svc *Service, md *descriptor.MethodDescriptorProto,
 	return meth, nil
 }
 
-func extractAPIOptions(meth *descriptor.MethodDescriptorProto) (*options.HttpRule, error) {
+func ExtractAPIOptions(meth *descriptor.MethodDescriptorProto) (*options.HttpRule, error) {
 	if meth.Options == nil {
 		return nil, nil
 	}
